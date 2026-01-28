@@ -7,8 +7,10 @@ Guía paso a paso para subir tus laboratorios modificados al repositorio del cur
 ## Requisitos
 
 - Cuenta en [GitHub](https://github.com) (crear una si no tienes)
-- Git instalado en tu computadora
-- Verificar con: `git --version`
+- Git instalado → verificar con: `git --version`
+- Python 3.8+ → verificar con: `python --version`
+- Node.js 18+ → verificar con: `node --version`
+- PostgreSQL con base de datos `qillqay` creada
 
 ---
 
@@ -86,10 +88,163 @@ Trabaja **dentro de las carpetas existentes**:
 ```
 SOFTII/
   Lab_Sesion2/    ← Modifica aquí
-  Lab_Sesion3/    ← Modifica aquí
+  Lab_Sesion3/    ← Modifica aquí (backend + frontend React)
   Lab_Sesion4/    ← Modifica aquí
   Lab_Sesion5/    ← Modifica aquí
 ```
+
+---
+
+## Paso 5.1: Instalar dependencias
+
+### Backend (Labs 2, 3, 4, 5)
+
+Cada lab tiene su propio `requirements.txt`:
+
+```bash
+cd Lab_Sesion3
+pip install -r requirements.txt
+```
+
+### Frontend React (Solo Lab 3)
+
+El Lab 3 incluye un frontend React en la carpeta `frontend/`:
+
+```bash
+cd Lab_Sesion3/frontend
+npm install
+```
+
+> Esto crea la carpeta `node_modules/` (NO se sube a GitHub, el `.gitignore` la excluye).
+
+---
+
+## Paso 5.2: Ejecutar los laboratorios
+
+### Lab 2 (una sola terminal)
+
+```bash
+cd Lab_Sesion2
+uvicorn main:app --reload
+```
+- API: http://localhost:8000
+- Docs: http://localhost:8000/docs
+
+### Lab 3 (dos terminales)
+
+**Terminal 1 — Backend:**
+```bash
+cd Lab_Sesion3
+uvicorn app.main:app --reload
+```
+- API: http://localhost:8000
+- Docs: http://localhost:8000/docs
+
+**Terminal 2 — Frontend React:**
+```bash
+cd Lab_Sesion3/frontend
+npx vite
+```
+- App React: http://localhost:5174
+
+> El frontend React consume la API del backend. Ambos deben estar corriendo al mismo tiempo.
+
+### Lab 4 (una sola terminal)
+
+```bash
+cd Lab_Sesion4
+uvicorn app.main:app --reload
+```
+- API: http://localhost:8000
+- Probar en Swagger: POST `/auth/register` → POST `/auth/login` → GET `/auth/me` con token
+
+### Lab 5 (una sola terminal)
+
+```bash
+cd Lab_Sesion5
+uvicorn app.main:app --reload
+```
+- API: http://localhost:8000
+- Probar demos: `python demos/demo1_basico.py` (no requiere servidor)
+- Probar descarga: GET `/documentos/tesis/{id}/docx` (requiere servidor)
+
+---
+
+## Paso 5.3: Modificar el Frontend React (Lab 3)
+
+### Estructura del frontend
+
+```
+Lab_Sesion3/frontend/
+  index.html          ← HTML base (no tocar)
+  package.json        ← Dependencias npm (no tocar)
+  vite.config.js      ← Config Vite: puerto 5174
+  src/
+    main.jsx          ← Monta React en el DOM (no tocar)
+    App.jsx           ← COMPONENTE PRINCIPAL (modificar aquí)
+    api.js            ← Funciones de conexión a la API (modificar si agregas endpoints)
+    index.css         ← Estilos visuales (modificar para cambiar diseño)
+```
+
+### Archivos clave para modificar
+
+**`src/App.jsx`** — Componente principal con toda la lógica:
+- Listado de tesis con tarjetas
+- Formulario de creación/edición (modal)
+- Búsqueda por título
+- Cambio de estado
+- Estadísticas
+
+**`src/api.js`** — Funciones que conectan con el backend:
+```javascript
+// Si agregas un nuevo endpoint en FastAPI, agrega aquí su función fetch:
+export async function miFuncion() {
+  const res = await fetch("http://localhost:8000/api/mi-endpoint");
+  return res.json();
+}
+```
+
+**`src/index.css`** — Estilos de la aplicación:
+- Modificar colores, fuentes, tamaños
+- Agregar nuevos estilos para componentes nuevos
+
+### Ejemplo: Agregar un nuevo campo al formulario
+
+**1. Backend** — Agregar campo en `Lab_Sesion3/app/schemas/tesis.py`:
+```python
+class TesisInput(BaseModel):
+    titulo: str
+    autor: str
+    escuela: str = "Ingenieria de Sistemas"
+    asesor: str = ""    # ← NUEVO CAMPO
+```
+
+**2. Frontend** — Agregar al estado del formulario en `App.jsx`:
+```jsx
+const [form, setForm] = useState({
+  titulo: "",
+  autor: "",
+  escuela: "Ingenieria de Sistemas",
+  asesor: "",    // ← NUEVO CAMPO
+});
+```
+
+**3. Frontend** — Agregar input en el formulario JSX en `App.jsx`:
+```jsx
+<div className="form-group">
+  <label>Asesor</label>
+  <input
+    type="text"
+    value={form.asesor}
+    onChange={(e) => setForm({ ...form, asesor: e.target.value })}
+    placeholder="Nombre del asesor..."
+  />
+</div>
+```
+
+### Hot Reload
+
+Mientras Vite está corriendo (`npx vite`), cada cambio que guardes en los archivos `.jsx` o `.css` se refleja **automáticamente** en el navegador sin recargar la página.
 
 ---
 
@@ -208,6 +363,11 @@ git push origin alumno/tu-nombre
 | `Author identity unknown` | Falta configurar nombre/email | `git config user.name "Tu Nombre"` |
 | `Permission denied` | No tienes acceso al repo original | Verificar que haces push a **tu fork**, no al repo del docente |
 | `merge conflict` | Modificaste un archivo que cambió en el original | Pedir ayuda al docente |
+| `CORS policy: blocked` | El frontend no puede conectar con el backend | Verificar que el backend esté corriendo en puerto 8000 |
+| `ERR_CONNECTION_REFUSED` (React) | El backend no está corriendo | Iniciar backend primero: `uvicorn app.main:app --reload` |
+| `npm ERR! missing script` | Estás en la carpeta incorrecta | Ir a `Lab_Sesion3/frontend/` antes de ejecutar npm |
+| `Module not found` (React) | Falta instalar dependencias npm | Ejecutar `npm install` en la carpeta `frontend/` |
+| React muestra pantalla en blanco | Error en el código JSX | Abrir la consola del navegador (F12) para ver el error |
 
 ---
 
