@@ -35,5 +35,8 @@ nul
 *.docx
 *.pptx
 
+# Guias docente (solo local)
+Guia_Docente*
+
 # Byte-compiled
 *.pyc
